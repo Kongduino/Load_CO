@@ -102,7 +102,7 @@ Begin DesktopWindow Window1
       Transparent     =   False
       Underline       =   False
       Visible         =   True
-      Width           =   388
+      Width           =   294
    End
    Begin DesktopTextField tfHimem
       AllowAutoDeactivate=   True
@@ -929,6 +929,38 @@ Begin DesktopWindow Window1
       Visible         =   True
       Width           =   60
    End
+   Begin DesktopButton pbSelectFolder
+      AllowAutoDeactivate=   True
+      Bold            =   False
+      Cancel          =   False
+      Caption         =   "select..."
+      Default         =   False
+      Enabled         =   True
+      FontName        =   "System"
+      FontSize        =   0.0
+      FontUnit        =   0
+      Height          =   20
+      Index           =   -2147483648
+      InitialParent   =   ""
+      Italic          =   False
+      Left            =   328
+      LockBottom      =   False
+      LockedInPosition=   False
+      LockLeft        =   True
+      LockRight       =   False
+      LockTop         =   True
+      MacButtonStyle  =   0
+      Scope           =   0
+      TabIndex        =   7
+      TabPanelIndex   =   0
+      TabStop         =   True
+      Tooltip         =   ""
+      Top             =   20
+      Transparent     =   False
+      Underline       =   False
+      Visible         =   True
+      Width           =   80
+   End
 End
 #tag EndDesktopWindow
 
@@ -1069,7 +1101,11 @@ End
 #tag Events lbFiles
 	#tag Event
 		Sub Opening()
-		  Path = App.ExecutableFile.Parent.Parent.Parent.Parent.ShellPath
+		  #if TargetMacOS
+		    Path = App.ExecutableFile.Parent.Parent.Parent.Parent.ShellPath
+		  #else
+		    Path = App.ExecutableFile.Parent.ShellPath
+		  #endif
 		  RefreshFiles()
 		  me.AcceptFileDrop("")
 		End Sub
@@ -1374,7 +1410,26 @@ End
 		  Buffer.RemoveAt(0)
 		  lbLog.AddRow "Sending "+s
 		  MySerial.Write s + EndOfLine.Windows
+		  lbLog.SelectedRowIndex = lbLog.LastRowIndex
+		End Sub
+	#tag EndEvent
+#tag EndEvents
+#tag Events pbSelectFolder
+	#tag Event
+		Sub Pressed()
+		  Dim f As FolderItem
+		  f = New FolderItem(Path, FolderItem.PathModes.Shell)
+		  Var dlg As New SelectFolderDialog
+		  dlg.ActionButtonCaption = "Select .co Files Folder"
+		  dlg.Title = "Select"
+		  dlg.PromptText = "Select the folder where your .co files are."
+		  dlg.InitialFolder = f
 		  
+		  f = dlg.ShowModal()
+		  If f <> Nil Then
+		    Path = f.ShellPath
+		    RefreshFiles()
+		  End If
 		End Sub
 	#tag EndEvent
 #tag EndEvents
