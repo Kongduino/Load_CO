@@ -1,6 +1,22 @@
 #tag Class
 Protected Class App
 Inherits DesktopApplication
+	#tag MenuHandler
+		Function HelpAbout() As Boolean Handles HelpAbout.Action
+			AboutWin.Show()
+			Return True
+			
+		End Function
+	#tag EndMenuHandler
+
+
+	#tag Method, Flags = &h0
+		Sub EnableMenu()
+		  HelpAbout.Enabled = True
+		End Sub
+	#tag EndMethod
+
+
 	#tag Constant, Name = kEditClear, Type = String, Dynamic = False, Default = \"&Delete", Scope = Public
 		#Tag Instance, Platform = Windows, Language = Default, Definition  = \"&Delete"
 		#Tag Instance, Platform = Linux, Language = Default, Definition  = \"&Delete"

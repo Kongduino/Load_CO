@@ -864,6 +864,37 @@ Begin DesktopWindow Window1
          Visible         =   True
          Width           =   80
       End
+      Begin DesktopProgressBar pbUpload
+         Active          =   False
+         AllowAutoDeactivate=   True
+         AllowTabStop    =   False
+         Enabled         =   True
+         Height          =   20
+         Indeterminate   =   False
+         Index           =   -2147483648
+         InitialParent   =   "gbSend"
+         Left            =   132
+         LockBottom      =   False
+         LockedInPosition=   False
+         LockLeft        =   True
+         LockRight       =   False
+         LockTop         =   True
+         MaximumValue    =   100
+         PanelIndex      =   0
+         Scope           =   0
+         TabIndex        =   6
+         TabPanelIndex   =   0
+         Tooltip         =   ""
+         Top             =   574
+         Transparent     =   False
+         Value           =   50.0
+         Visible         =   False
+         Width           =   164
+         _mIndex         =   0
+         _mInitialParent =   ""
+         _mName          =   ""
+         _mPanelIndex    =   0
+      End
    End
    Begin SerialConnection MySerial
       Baud            =   10
@@ -968,7 +999,7 @@ End
 	#tag Event
 		Sub Opening()
 		  Me.Left = (Screen(0).Width - me.Width) \ 2
-		  Me.Top = Screen(0).Height \ 4
+		  Me.Top = 100
 		  Me.Height = kMinHeight
 		  
 		  lbPlease.Text = ""
@@ -976,6 +1007,8 @@ End
 		  lbPlease1.Text = ""
 		  
 		  RefreshPorts()
+		  
+		  App.RefreshMenuBar()
 		  
 		End Sub
 	#tag EndEvent
@@ -1089,6 +1122,10 @@ End
 
 	#tag Property, Flags = &h0
 		Path As String
+	#tag EndProperty
+
+	#tag Property, Flags = &h0
+		TotalSent As Integer
 	#tag EndProperty
 
 
@@ -1235,6 +1272,9 @@ End
 		  Me.Text = Str(FileTop)
 		  s = "000"+Hex(FileTop)
 		  laFileTop.Text = "0x"+s.RightBytes(4)
+		  lbPlease2.Text = "CLEAR 256,"+Str(FileTop-1)
+		  tfFileEntry.Text = Me.Text
+		  laFileEntry.Text = laFileTop.Text
 		  
 		End Sub
 	#tag EndEvent
@@ -1300,6 +1340,7 @@ End
 	#tag Event
 		Sub Opening()
 		  me.Enabled = False
+		  pbReady.Enabled = True
 		  
 		End Sub
 	#tag EndEvent
@@ -1309,8 +1350,11 @@ End
 		  lbFiles.Enabled = False
 		  tfHimem.Enabled = False
 		  gbSend.Enabled = True
+		  pbReady.Enabled = True
+		  pbSelectFolder.Enabled = False
 		  Self.Height = 630
-		  
+		  Self.MinimumHeight = 630
+		  Self.MaximumHeight = 630
 		  
 		End Sub
 	#tag EndEvent
@@ -1334,6 +1378,7 @@ End
 		  
 		  lbLog.RemoveAllRows()
 		  MySerial.Write Str(FileTop)+","+Str(FileSize)+","+Str(FileEntry) + EndOfLine.Windows
+		  lbLog.AddRow Str(FileTop)+","+Str(FileSize)+","+Str(FileEntry)
 		  
 		  i = lbFiles.SelectedRowIndex
 		  s = lbFiles.CellTextAt(i, 1)+"/"+lbFiles.CellTextAt(i, 0)
@@ -1345,6 +1390,7 @@ End
 		  bs.Close()
 		  bs = Nil
 		  
+		  lbLog.AddRow "Buffering lines..."
 		  Dim c As UInt8
 		  en = FileSize - 1
 		  For i = 0 To en Step 16
@@ -1359,9 +1405,16 @@ End
 		        line = line + Hex(c)
 		      End If
 		    Next
-		    logAndQueue line
+		    Buffer.Add line
 		  Next
+		  lbLog.AddRow "Done. Ready to send."
+		  TotalSent = 0
+		  pbUpload.Value = 0
+		  pbUpload.MaximumValue = FileSize
+		  pbUpload.Visible = True
+		  Timer1.Period = 500
 		  Timer1.RunMode = Timer.RunModes.Multiple
+		  me.Enabled = False
 		  
 		End Sub
 	#tag EndEvent
@@ -1381,8 +1434,15 @@ End
 		  lbFiles.Enabled = True
 		  tfHimem.Enabled = True
 		  gbSend.Enabled = False
+		  pbSelectFolder.Enabled = True
+		  pbUpload.Visible = False
 		  Self.Height = kMinHeight
-		  
+		  Self.MinimumHeight = kMinHeight
+		  Self.MaximumHeight = kMinHeight
+		  lbLog.RemoveAllRows()
+		  Timer1.RunMode = Timer.RunModes.Off
+		  Redim Buffer(-1)
+		  MySerial.Close()
 		  
 		End Sub
 	#tag EndEvent
@@ -1402,15 +1462,23 @@ End
 		    me.RunMode = Timer.RunModes.Off
 		    lbLog.AddRow " - THE END -"
 		    MySerial.Close()
+		    pbUpload.Visible = False
+		    pbReady.Enabled = True
 		    Return
 		  End If
 		  
+		  me.Period = 3200
 		  Dim s As String
 		  s = Buffer(0)
 		  Buffer.RemoveAt(0)
 		  lbLog.AddRow "Sending "+s
 		  MySerial.Write s + EndOfLine.Windows
 		  lbLog.SelectedRowIndex = lbLog.LastRowIndex
+		  lbLog.Refresh()
+		  TotalSent = TotalSent + s.Length\2
+		  pbUpload.Value = TotalSent
+		  pbUpload.Refresh()
+		  
 		End Sub
 	#tag EndEvent
 #tag EndEvents
@@ -1704,6 +1772,14 @@ End
 	#tag EndViewProperty
 	#tag ViewProperty
 		Name="FileEntry"
+		Visible=false
+		Group="Behavior"
+		InitialValue=""
+		Type="Integer"
+		EditorType=""
+	#tag EndViewProperty
+	#tag ViewProperty
+		Name="TotalSent"
 		Visible=false
 		Group="Behavior"
 		InitialValue=""
